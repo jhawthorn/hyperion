@@ -13,27 +13,18 @@ rotationTime = max(0.1, rotationTime)
 brightness = max(0.0, min(brightness, 1.0))
 saturation = max(0.0, min(saturation, 1.0))
 
-# Initialize the led data
-ledData = bytearray()
-for i in range(hyperion.ledCount):
-	hue = float(i)/hyperion.ledCount
-	rgb = colorsys.hsv_to_rgb(hue, saturation, brightness)
-	ledData += bytearray((int(255*rgb[0]), int(255*rgb[1]), int(255*rgb[2])))
-
-# Calculate the sleep time and rotation increment
-increment = 3
-sleepTime = rotationTime / hyperion.ledCount
-while sleepTime < 0.05:
-	increment *= 2
-	sleepTime *= 2
-increment %= hyperion.ledCount
-
 # Switch direction if needed
 if reverse:
-	increment = -increment
-	
+	rotationTime = -rotationTime
+
+startTime = time.time()
 # Start the write data loop
 while not hyperion.abort():
+	currentTime = time.time() % rotationTime
+	ledData = bytearray()
+	for i in range(hyperion.ledCount):
+		hue = (float(i)/hyperion.ledCount - currentTime/rotationTime)%1
+		rgb = colorsys.hsv_to_rgb(hue, saturation, brightness)
+		ledData += bytearray((int(255*rgb[0]), int(255*rgb[1]), int(255*rgb[2])))
 	hyperion.setColor(ledData)
-	ledData = ledData[-increment:] + ledData[:-increment]
-	time.sleep(sleepTime)
+	time.sleep(0.05)
